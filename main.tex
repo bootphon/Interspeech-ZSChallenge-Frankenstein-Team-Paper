@@ -1,5 +1,5 @@
 \documentclass[a4paper]{article}
-%%%% ATTENTION THIS DOCUMENT IS USING GITHUB FOR EDITING/CHANGING
+%%% ATTENTION THIS DOCUMENT IS USING GITHUB FOR EDITING/CHANGING
 %%%% DO GIT PULL BEFORE CHANGING ANYTHING
 %%%% THe reason it is like that is that ED will be doing some editing
 %%%% on the plane over the next 24 hours
@@ -40,6 +40,8 @@
 
 %200 words max
 \begin{abstract}
+We report on an architecture for the unsupervised discovery of talker-invariant subword embeddings. It is made out of two components: a dynamic-time warping based spoken term discovery (STD) system, and a siamese deep neural network (DNN). The STD system clusters word-sized repeated fragments in the acoustic streams while the DNN is trained to minimize the distance between time aligned frames of tokens of the same cluster, and maximize the distance between tokens of different clusters. We use additional side information regarding the average duration of phonemic units, as well as talker identity tags. For evaluation we use the data sets and metrics of the Zero Resource Speech Challenge. The model shows improvement over the baseline in subword unit modeling. 
+\end{abstract}
 \noindent{\bf Index Terms}: zero resource speech challenge, feature extraction, deep learning\let\thefootnote\relax\footnote{* These authors contributed equally to this work.}
 % ED note: this is a very neutral abstract; it can cover basically anything we want to do; we can also report on % track 2 evals if we want (if we have good features, we may want to run STD on them.
 
