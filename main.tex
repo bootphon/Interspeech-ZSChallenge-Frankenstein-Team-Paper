@@ -1,0 +1,93 @@
+\documentclass[a4paper]{article}
+
+\usepackage{INTERSPEECH2015}
+
+\usepackage{graphicx}
+\usepackage{amssymb,amsmath,bm}
+\usepackage{textcomp}
+\usepackage{dsfont}
+
+\def\vec#1{\ensuremath{\bm{{#1}}}}
+\def\mat#1{\vec{#1}}
+\newcommand{\set}[1]{\left\{#1\right\}}
+\newcommand{\tup}[1]{\langle#1\rangle}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\card}[1]{\left\vert{#1}\right\vert}
+
+
+\sloppy % better line breaks
+\ninept
+
+
+
+\title{A Hybrid Dynamic Time Warping-Deep Neural Network Architecture for Unsupervised Acoustic Modeling}
+\makeatletter
+\def\name#1{\gdef\@name{#1\\}}
+\makeatother \name{{\em Roland Thiolli\`ere$^{1*}$, Ewan Dunbar$^{1*}$, Gabriel Synnaeve$^{1*}$} \\ {\em Maarten Versteegh$^1$, Emmanuel Dupoux$^1$}}
+
+\address{$^1$Ecole Normale Sup\'erieure / PSL Research University / EHESS / CNRS, France \\
+  {\small \tt rolthiolliere@gmail.com, emd@umd.edu, gabrielsynnaeve@gmail.com} \\ {\small \tt maartenversteegh@gmail.com, aren@jhu.edu, emmanuel.dupoux@gmail.com }
+}
+
+
+\begin{document}
+
+\maketitle
+
+%200 words max
+\begin{abstract}
+We report on an architecture for the unsupervised discovery of talker-invariant subword embeddings. It is made out of two components: a dynamic-time warping based spoken term discovery (STD) system, and a siamese deep neural network (DNN). The STD system clusters word-sized repeated fragments in the acoustic streams while the DNN is trained to minimize the distance between time aligned frames of tokens of the same cluster, and maximize the distance between tokens of different clusters. We use additional side information regarding the average duration of phonemic units, as well as talker identity tags. For evaluation we use the data sets and metrics of the Zero Resource Speech Challenge. The model shows improvement over the baseline in subword unit modeling. 
+\end{abstract}
+\noindent{\bf Index Terms}: zero resource speech challenge, feature extraction, deep learning\let\thefootnote\relax\footnote{* These authors contributed equally to this work.}
+% ED note: this is a very neutral abstract; it can cover basically anything we want to do; we can also report on % track 2 evals if we want (if we have good features, we may want to run STD on them.
+
+
+\section{Introduction}
+\section{System}
+\section{Results}
+\section{Discussion}
+
+
+
+%\begin{table}[htb]
+%\caption{\label{tab:track1} {\it Within and across talker Minimal Pair ABX error rates for the Zerospeech Baseline (MFCC) and Topline (supervised HMM-GMM posteriorgrams), and for our systems.}}
+%\vspace{1mm}
+%\centerline{
+%\begin{tabular}{lcccc}
+%\hline
+%\vspace{1mm}        & \multicolumn{2}{c}{\underline{English}}  & \multicolumn{2}{c}{\underline{Tsonga}}    \\
+%                        & within  & across   & within  & across   \\
+%\hline
+%Baseline           & 15.6      & 28.1      & 19.1      & 33.8      \\
+%Our system1         & 00.0      & 00.0      & 00.0      & 00.0      \\
+%Our system2         & 00.0      & 00.0      & 00.0      & 00.0      \\
+%Our system3         & 00.0      & 00.0      & 00.0      & 00.0      \\
+%Topline            & 12.1      & 16.0      & 3.5       & 4.5      \\
+%\hline
+%\end{tabular}
+%}
+%\end{table}
+%
+%
+%\setlength{\tabcolsep}{4pt}
+%\begin{table*}[t]
+%\begin{tabular}{lccccccccccccccccc}
+%\hline
+%         &       &       &\multicolumn{3}{c}{\underline{Matching}}&\multicolumn{3}{c}{\underline{Grouping}}&\multicolumn{3}{c}{\underline{Type}}&\multicolumn{3}{c}{\underline{Token}}&\multicolumn{3}{c}{\underline{Boundary}}\\
+%         & NED   & Cov   & P        & R     & F       & P     & R     & F     & P     & R     & F     & P     & R     & F  & P     & R     & F    \\
+%\hline
+% &\multicolumn{17}{c}{\underline{English}}  \\
+%Baseline & 0.219 & 0.163 & 0.394    & 0.016 & 0.031   & 0.214 & 0.846 & 0.333 & 0.062 & 0.019 & 0.029 & 0.055 & 0.004 & 0.080 & 0.441 & 0.047 & 0.086 \\
+%Our system  & 0.000 & 0.000 & 0.000    & 0.000 & 0.000   & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 \\
+% &\multicolumn{17}{c}{\underline{Tsonga}}  \\
+%Baseline & 0.120 & 0.162 & 0.691    & 0.003 & 0.005   & 0.521 & 0.774 & 0.622 & 0.032 & 0.014 & 0.020 & 0.026 & 0.005 & 0.008 & 0.223 & 0.056 & 0.089 \\
+%Our system  & 0.000 & 0.000 & 0.000    & 0.000 & 0.000   & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 \\
+%\hline
+%\end{tabular}
+%\end{table*}
+
+ \section{Acknowledgements}
+RT, ED, GS, MV and ED's research was funded by the European Research Council (ERC-2011-AdG 295810 BOOTPHON), the Agence Nationale pour la Recherche (ANR-2010-BLAN-1901-1 BOOTLANG) and the Fondation de France. It was also supported by ANR-10-IDEX-0001-02 PSL and ANR-10-LABX-0087 IEC.
+
+
+\end{document}
