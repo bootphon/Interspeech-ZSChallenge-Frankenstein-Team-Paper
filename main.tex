@@ -1,7 +1,7 @@
 \documentclass[a4paper]{article}
 %%% ATTENTION THIS DOCUMENT IS USING GITHUB FOR EDITING/CHANGING
 %%%% DO GIT PULL BEFORE CHANGING ANYTHING
-%%%% THe reason it is like that is that ED will be doing some editing
+%%%% The reason it is like that is that ED will be doing some editing
 %%%% on the plane over the next 24 hours
 
 \usepackage{INTERSPEECH2015}
@@ -46,32 +46,94 @@ We report on an architecture for the unsupervised discovery of talker-invariant 
 % ED note: this is a very neutral abstract; it can cover basically anything we want to do; we can also report on % track 2 evals if we want (if we have good features, we may want to run STD on them.
 
 
-\section{Introduction}
+\section{Introduction and rationale}
+The automatic discovery of linguistic units from the raw speech stream \cite{} may seem a daunting task from a scientific and technological point of view. Yet, the fact that infants spontaneously converge on what amounts to a functional speech recognizer (language-tuned acoustic and language models) within a year or so, by mere immersion in a linguistic community, indicates that it is not an impossible one. Admittedly, infants do not construct a speech recognizer by being fed hours of speech paired with phone labels. However, their task is not totally unsupervised either. Apart from the fact that infant speech input is accompanied by multimodal signals that may contain relevant side information (visual context, social signals etc) , the speech signal itself is produced by an adult linguistic system which has a particular universal structure  that the infant learner could exploit. Here, we will exploit one  such source of information related to the fact that speech contains hierarchically organized levels of structures: utterances are made of words, and words of phoneme. 
+
+In particular, our paper rests of two critical assumptions regarding words and phonemes: (1) word classes are more separated in acoustic space than phoneme classes, (2) pairs of word tokens share most of their phonemes if they belong to the same class, and differ in most of their phonemes if not. At a high level, this suggests the following learning strategy: Start by discovering word-like units from the signal using Spoken Term Discovery  (assumption 1), then, use the discovered word-like units to construct a phonetic tutor that trains phoneme-like representations (assumption 2). The phonetic tutor works by aligning each pairs of words-like tokens and declaring that all aligned frames represent the same phoneme when the word-like tokens are in the same class, and don't when they don't. This tutor, instead of providing phone labels, provides a weaker but usable signal regarding which instances of phonemes should be considered same or different. Here, we will apply this logic at the frame rather than the phone level, in order to learn abstract speech features using a Deep Neural (DNN) architecture.  
+
+% Potentially, this new representation could help discovering better word-like units, yielding a positive feddback loop.
+
+Before moving on, our two assumptions are easy to verify under a unigram model of the lexicon, whereby each word is made up of random and independent draws in the phoneme inventory. In that case, if the acoustic overlap of a string of phonemes is going to diminish with the size of the string (an application of the central limit theorem). As for assumption 2, the normalized edit distance between two random words is around .9 assuming the phoneme distribution of English. (if we only consider words of matching length, and restrict the edits to substitutions, the normalized edit distance is approximatively equal to $1-p_{rep}$, where $p_{rep}$ is the repeat probability of phonemes $p_{rep}=\sum_i{p_i^2}$). With real lexicons, the unigram model does not hold, but these assumptions are still generally met, as illustrated in Figure 1. 
+
+In addition to exploiting the relationships between phonemes and words, our paper exploits two other potential sources of side information. The first one is that speech not only conveys linguistic information, but also information pertaining to talker identity. Here, we assume that talker identity is accessible to infants, through an analysis of the speech signal alone (as in Talker Diarization), and/or using multimodal input. We will explore the fact that having access to talker ID information is useful, since it provides information about what information to \emph{ignore} or \emph{normalize for} in the speech signal. The second source of information could be an innate knowledge of the temporal properties of phoneme units in human languages. Typically phonemes have a duration around 70ms, and is most of the time comprised between 20ms and 200ms. One could use this source of knowledge to either discard sections of speech that are corrupted and therefore do not obey this structure, or to discard potentially flawed features representations for speech.
+
+This paper is structured as follows: we will start by presenting some related work, then explain each component of our system, and present and discuss the results of our experiments ran under the corpora and evaluation metrics of the zero speech2015 Challenge. 
+
+% in addition, we also attempt to use talker information to 
+\section{Related Work}
+Previous work in the psycholinguistic literature has shown that lexical information can help discovering phoneme identity. Using a Bayesian model, Feldman demonstrated the feasibility of this principle in a toy model with simple gaussian data. Martin et al, and Fourtassi et al. demonstrated using transcribed speech that such top down information can help to cluster allophones into phonemes. Synnaeve shown that the ABnet architecture using oracle word labels to feed a word tutor can construct a phonetic embedding whose performance on cross talker phoneme discrimination was falling in between the raw filterbanks and supervised embeddings. Aren Jansen et all used a different architecture, one based on denoising auto-encoders, and found that both oracle word labels and speech fragments discovered automatically can yield good speech features.  What we test here is whether the ABnet architecture can be coupled with a spoken term discovery system to yield synergistic learning in both directions (using words to help discovering phonemes and vice versa). 
+
+As for using talker information as a side, there is a very rich literature in the HMM framework in talker normalization using feature or model trasformation (cite). With DNN architecture, there is relatively less work, although a common technique consist in concatenating a speaker embedding (ie i vectors) with the input features during the training of network. (cite). Whether such technique will work in the context of a weekly supervised ABnet remains to be seen. FInallyt regarding the temporal structuture of phonemes, a bunch of paper have used the difference in autocorrelation between adjacent frames and distant feames as a measure of the quality of a speech recognizer (cite). The so called M or MDelta measure indeed predicts phone error rate, gowever has not up to our knowledge been used in the context of wealy supervized learning.
+
 \section{System}
+The entire system is presented in Figure \ref{fig1}. It is composed of several elements which we describe here. 
+\subsection{Spoken term Discovery}
+We use the optimized JHU spoken term discovery system based on \cite{jansen}. The basic idea rests on searching for repeated acoustic patterns using dynamic time warping across the entire similarity matrix \cite{park}. Typically, repeated patterns show up a diagonal stretches of high similarity which are then segmented out, and later, fed into a clustering algorithm. The whole search is made tractable through the use of Locality Sensitive Hashing, a technique using random vector projections followed by bit quantization. Speech features, that are initially a vector of floats in $d$ dimensions become a vector of bits in $b$ dimensions, for which the Hamming distance turns out to be an efficient approximation of the frame-wise cosine similarity metric. The LSH bit signatures of each frames are then sorted using multiple lexicographic orders, and scanned using a fixed width beam in order to restrict the computation of the frame-wise similarities to pairs of frames that are the most similar. This results in a sparse similarity matrix over the entire corpus. Next, the similarity matrix is searched for diagonal patterns, first using a line search, and then using DTW.  The algorithm outputs pairs of matched fragments together with their DTW score (the average similarity along the matching path). Further post processing involves recomputing the DTW scores using the real cosine function on the original input features, and applying connected component clustering of the found fragments as in \cite{park} in order to construct classes. In this paper, we used the implementation of \cite{jansen}, with an LSH similarity threshold of .5, and a DTW  threshold of .98, and a connected component threshold of .98. These numbers are the same as in \cite{}, submitted, so that a comparison can be made. 
+
+\subsection{Phonetic Tutor}
+The phonetic tutor takes as input a list of matching word-like fragments, a frame-wise feature representation of these fragments, and outputs list of matching and mismatching frames. For matching frames, it aligns each fragment pair using DTW with cosine distance on the feature representations, and returns each frame pair on the DTW path. For mismatching pairs, it samples word fragment pairs belonging to different classes and aligns them using a diagonal line and returns each pair along it. Instead of taking all of the possible pairs of mismatching word fragments, our phonetic tutor samples them in order to have the same number of matching and mismatching word pairs, and also, to take into account talker ID information in order to balance the matching and mismatching word pairs for both same talker pairs and different talker pairs. The ratio of same talker and different talker was left free to vary depending on the input fragments. The reason of this balancing act was to avoid having a statistical bias whereby the information about matching versus mismatching phonetic content would be accidentally correlated with same versus different talker, which would have the unfortunate effect of turning the phoneme learning task into an easier talker id task.
+
+\subsection{ABnet}
+This part of the system learns a phonetic embedding, i.e., a vector representation of speech sounds. It is based on the work of \cite{synnaeve}. Here we use an architecture where we stack 7 frames of input features in the input layer (a center frame, and 3 context frames on each side), followed by x layers of Y units, and a final output layer of Z units. Two identical copies of the same network are fed by the members of each pairs of features $A$, and $B$, respectively. The output of these two networks ($y_A$ and $y_B$) are then compared using the $coscos^2$ loss function as follows:
+
+\begin{equation}
+\mathcal{L}(A,B) = w.(1-\cos(y_{A}, y_{B})) + (1-w).\cos^2(y_{A}, y_{B})
+\end{equation}
+
+with $w \in \{0,1\}$ (different or same word). Roughly speaking, the loss function is minimum when the vector representations for matching frames are colinear for matching frames and orthogonal for mismatching frames. Such loss function was shown to be optimal in \cite{synnaeve}. The network is initialized with random weights and then trained on x\% of the data. The rest of the data is used as a heldout set, which is tested to stop training in order to prevent the network from overfitting. The  'early stopping' rule is xxx. The networks were run for 500 epochs on a K20 Tesla GPU machine. The ABnet code is programmed in python with the Theano library and available in xxx.
+
+\subsection{Mdelta filter}
+The Mdelta measure that we used was based on hermaksnly. It uses a correlation method to derive two ditance
+
+\subsection{Talker ID}
+Talker ID was just read off the filenames of both datasets. To derive the talker ID embedding, we used the same ABnet architecture and similar tutor, except that we used a cost function trying to optimize talker discrimination, across and withing phoneme identity.
+
+\subsection{Speech features}
+We used two sets of speech features in this paper. The FDLP features contained 5 dimensions \cite{} with Delta and Delta-Delta, resulting in a 15 dimensional vector. These features have been claimed to be very resistant to talker change. The filter bank features (FB) were obtained by passing the signal through a 40 channels mel bank of filters and was subjected to a cubic root compression.  Both sets of features were mean-variance normalized file by file, skipping the areas indicated as non speech by the VAD. 
+
+\section{Experiments}
+\subsection{Corpora}
+We use the corpora available from the ZeroSpeech2015 Challenge website, which contain an English and a Xitsonga dataset. 
+
+The data sets are composed of selected segments from two free and open access data sets, the Buckeye Corpus  in American English, and the NCHLT Speech Corpus of . The English dataset is a subset of the Buckeye corpus \cite{buckeye} consisting of casual conversational speech containing twelve speakers (between 16 and 30 minute of speech) for a total of about 5 hours. The Xitsonga \cite{xitsonga2014}The section of the NCHLT corpus that was used consists of read speech recorded by 24 speakers (12 male, 12 female). Of each speaker, between 2 and 29 minutes were selected ($\mu=13.16$) with the same criteria as for the Buckeye corpus, for a total of 5h22m03s. For both corpora, the selected segments were provided to the participants and the remaining portions of the corpus were declared non-speech. Each segment or file contained speech for only one speaker and this information as well as the speaker ID was also provided. The evaluation was based on forced aligned intervals for the phonemes in the corpora, but this information was not communicated to the participants.
+
+\subsection{Metrics}
+We use the metrics trom both Track 1 (sub word unit discovery), which consists in an aggregate minimal pair ABX discrimination score ran on all of the triphones of the datasets. These scores indicate the acoustic overlap of the phoneme classes and distinguish between a within talker and a between talker discrimination. The metrics of Task 2 (spoken term discovery) measure a range of aspects of the task, which includes matching speech fragments, clustering them, and using them to parse the speech stream. 
+\subsection{The base experiment: STD-ABnet}
+Our experiment uses STD to extract word-like units from FDLP features. This systems turns extracts N classes, giving rise to M pairs of fragments X being same talker, Y different talker. These pairs are then fed to the phonetic tutor, which constructs x pairs of same W same T, y pairs of different W same T, and z and t pairs of same and different words, different talkers. The pairs of same are DTW aligned, and the pairs of different are diagnonally aligned resulting in xk pairs of frames. 
+These pairs of frames are then presented to the ABnet system which is trained using the coscos2 function. When the early stopping criterion is reached, the networks's weights are frozen, and used to derive a feature representation for the entire corpus. 
+\subsection{M-Delta filtering}
+\subsection{Talker embedding normalization}
+\subsection{Improving word discovery}
+
 \section{Results}
+This feature representaion is then evaluated using the Track 1 ABX evaluation metrics and is shown in Table 1.
+As seen, the results are quite good compared to the topline resuts. 
+
 \section{Discussion}
 
 
 
-%\begin{table}[htb]
-%\caption{\label{tab:track1} {\it Within and across talker Minimal Pair ABX error rates for the Zerospeech Baseline (MFCC) and Topline (supervised HMM-GMM posteriorgrams), and for our systems.}}
-%\vspace{1mm}
-%\centerline{
-%\begin{tabular}{lcccc}
-%\hline
-%\vspace{1mm}        & \multicolumn{2}{c}{\underline{English}}  & \multicolumn{2}{c}{\underline{Tsonga}}    \\
-%                        & within  & across   & within  & across   \\
-%\hline
-%Baseline           & 15.6      & 28.1      & 19.1      & 33.8      \\
-%Our system1         & 00.0      & 00.0      & 00.0      & 00.0      \\
-%Our system2         & 00.0      & 00.0      & 00.0      & 00.0      \\
-%Our system3         & 00.0      & 00.0      & 00.0      & 00.0      \\
-%Topline            & 12.1      & 16.0      & 3.5       & 4.5      \\
-%\hline
-%\end{tabular}
-%}
-%\end{table}
-%
+\begin{table}[htb]
+\caption{\label{tab:track1} {\it Within and across talker Minimal Pair ABX error rates for the Zerospeech Baseline (MFCC) and Topline (supervised HMM-GMM posteriorgrams), and for our systems.}}
+\vspace{1mm}
+\centerline{
+\begin{tabular}{lcccc}
+\hline
+\vspace{1mm}        & \multicolumn{2}{c}{\underline{English}}  & \multicolumn{2}{c}{\underline{Tsonga}}    \\
+                        & within  & across   & within  & across   \\
+\hline
+Baseline           & 15.6      & 28.1      & 19.1      & 33.8      \\
+Our system1         & 00.0      & 00.0      & 00.0      & 00.0      \\
+Our system2         & 00.0      & 00.0      & 00.0      & 00.0      \\
+Our system3         & 00.0      & 00.0      & 00.0      & 00.0      \\
+Topline            & 12.1      & 16.0      & 3.5       & 4.5      \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+
 %
 %\setlength{\tabcolsep}{4pt}
 %\begin{table*}[t]
