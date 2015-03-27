@@ -10,6 +10,9 @@
 \usepackage{amssymb,amsmath,bm}
 \usepackage{textcomp}
 \usepackage{dsfont}
+\usepackage{url}
+\usepackage{color}
+
 
 \def\vec#1{\ensuremath{\bm{{#1}}}}
 \def\mat#1{\vec{#1}}
@@ -30,7 +33,8 @@
 \makeatother \name{{\em Roland Thiolli\`ere$^{1*}$, Ewan Dunbar$^{1*}$, Gabriel Synnaeve$^{1*}$} \\ {\em Maarten Versteegh$^1$, Emmanuel Dupoux$^1$}}
 
 \address{$^1$Ecole Normale Sup\'erieure / PSL Research University / EHESS / CNRS, France \\
-  {\small \tt rolthiolliere@gmail.com, emd@umd.edu, gabrielsynnaeve@gmail.com} \\ {\small \tt maartenversteegh@gmail.com, aren@jhu.edu, emmanuel.dupoux@gmail.com }
+  {\small \tt rolthiolliere@gmail.com, emd@umd.edu, gabrielsynnaeve@gmail.com} \\ {\small \tt maartenversteegh@gmail.com, %aren@jhu.edu,
+  emmanuel.dupoux@gmail.com }
 }
 
 
@@ -53,7 +57,7 @@ In particular, our paper rests of two critical assumptions regarding words and p
 
 % Potentially, this new representation could help discovering better word-like units, yielding a positive feddback loop.
 
-Before moving on, our two assumptions are easy to verify under a unigram model of the lexicon, whereby each word is made up of random and independent draws in the phoneme inventory. In that case, if the acoustic overlap of a string of phonemes is going to diminish with the size of the string (an application of the central limit theorem). As for assumption 2, the normalized edit distance between two random words is around .9 assuming the phoneme distribution of English. (if we only consider words of matching length, and restrict the edits to substitutions, the normalized edit distance is approximatively equal to $1-p_{rep}$, where $p_{rep}$ is the repetition probability of phonemes $p_{rep}=\sum_i{p_i^2}$). With real lexicons, the unigram model does not hold, but these assumptions are still generally met, as illustrated in Figure 1.
+Before moving on, our two assumptions are easy to verify under a unigram model of the lexicon, whereby each word is made up of random and independent draws in the phoneme inventory. In that case, if the acoustic overlap of a string of phonemes is going to diminish with the size of the string (an application of the central limit theorem). As for assumption 2, the normalized edit distance between two random words is around .9 assuming the phoneme distribution of English. (if we only consider words of matching length, and restrict the edits to substitutions, the normalized edit distance is approximatively equal to $1-p_{rep}$, where $p_{rep}$ is the repetition probability of phonemes $p_{rep}=\sum_i{p_i^2}$). With real lexicons, the unigram model does not hold, but these assumptions are still generally met, as illustrated in Figure~\ref{TODO}.
 
 In addition to exploiting the relationships between phonemes and words, our paper exploits two other potential sources of side information. The first one is that speech not only conveys linguistic information, but also information pertaining to talker identity. Here, we assume that talker identity is accessible to infants, through an analysis of the speech signal alone (as in Talker Diarization), and/or using multimodal input. We will explore the fact that having access to talker ID information is useful, since it provides information about what information to \emph{ignore} or \emph{normalize for} in the speech signal. The second source of information could be an innate knowledge of the temporal properties of phoneme units in human languages. Typically phonemes have a duration around 70ms, and is most of the time comprised between 20ms and 200ms. One could use this source of knowledge to either discard sections of speech that are corrupted and therefore do not obey this structure, or to discard potentially flawed features representations for speech.
 
@@ -66,7 +70,7 @@ Previous work in the psycholinguistic literature has shown that lexical informat
 As for using talker information as a side, there is a very rich literature in the HMM framework in talker normalization using feature or model trasformation (cite). With DNN architecture, there is relatively less work, although a common technique consist in concatenating a speaker embedding (ie i vectors) with the input features during the training of network. (cite). Whether such technique will work in the context of a weekly supervised ABnet remains to be seen. FInallyt regarding the temporal structuture of phonemes, a bunch of paper have used the difference in autocorrelation between adjacent frames and distant feames as a measure of the quality of a speech recognizer (cite). The so called M or MDelta measure indeed predicts phone error rate, gowever has not up to our knowledge been used in the context of wealy supervized learning.
 
 \section{System}
-The entire system is presented in Figure \ref{fig1}. It is composed of several elements which we describe here.
+The entire system is presented in Figure~\ref{TODO}. It is composed of several elements which we describe here.
 \subsection{Spoken term Discovery}
 We use the spoken term discovery system proposed in \cite{jansen&vandurme2011}. The basic idea rests on searching for repeated acoustic patterns using dynamic time warping across the entire similarity matrix \cite{park&glass2008}. Typically, repeated patterns show up a diagonal stretches of high similarity which are then segmented out, and later, fed into a clustering algorithm. The whole search is made tractable through the use of Locality Sensitive Hashing, a technique using random vector projections followed by bit quantization. Speech features, that are initially a vector of floats in $d$ dimensions become a vector of bits in $b$ dimensions, for which the Hamming distance turns out to be an efficient approximation of the frame-wise cosine similarity metric. The LSH bit signatures of each frames are then sorted using multiple lexicographic orders, and scanned using a fixed width beam in order to restrict the computation of the frame-wise similarities to pairs of frames that are the most similar. This results in a sparse similarity matrix over the entire corpus. Next, the similarity matrix is searched for diagonal patterns, first using a line search, and then using DTW.  The algorithm outputs pairs of matched fragments together with their DTW score (the average similarity along the matching path). Further post processing involves recomputing the DTW scores using the real cosine function on the original input features, and applying connected component clustering of the found fragments as in \cite{park&glass2008} in order to construct classes. In this paper, we used the implementation of \cite{jansen&vandurme2011}, with an LSH similarity threshold of .5, and a DTW  threshold of .98, and a connected component threshold of .98. These numbers are the same as in \cite{}, submitted, so that a comparison can be made.
 
@@ -74,13 +78,34 @@ We use the spoken term discovery system proposed in \cite{jansen&vandurme2011}. 
 The phonetic tutor takes as input a list of matching word-like fragments, a frame-wise feature representation of these fragments, and outputs list of matching and mismatching frames. For matching frames, it aligns each fragment pair using DTW with cosine distance on the feature representations, and returns each frame pair on the DTW path. For mismatching pairs, it samples word fragment pairs belonging to different classes and aligns them using a diagonal line and returns each pair along it. Instead of taking all of the possible pairs of mismatching word fragments, our phonetic tutor samples them in order to have the same number of matching and mismatching word pairs, and also, to take into account talker ID information in order to balance the matching and mismatching word pairs for both same talker pairs and different talker pairs. The ratio of same talker and different talker was left free to vary depending on the input fragments. The reason of this balancing act was to avoid having a statistical bias whereby the information about matching versus mismatching phonetic content would be accidentally correlated with same versus different talker, which would have the unfortunate effect of turning the phoneme learning task into an easier talker id task.
 
 \subsection{ABnet}
-This part of the system learns a phonetic embedding, i.e., a vector representation of speech sounds. It is based on the work of \cite{synnaeve&dupoux2014}. Here we use an architecture where we stack 7 frames of input features in the input layer (a center frame, and 3 context frames on each side), followed by x layers of Y units, and a final output layer of Z units. Two identical copies of the same network are fed by the members of each pairs of features $A$, and $B$, respectively. The output of these two networks ($y_A$ and $y_B$) are then compared using the $coscos^2$ loss function as follows:
+\begin{figure}[h]
+    \begin{center}
+        \includegraphics[width=0.68\columnwidth]{abnet}
+        \caption{Schema of our siamese neural network. In the results presented here, we used varying K values (depth in hidden layers), NF=7, NH=500, NE=100 and sigmoid units.}
+    \end{center}
+    \label{fig:abnet}
+\end{figure}
 
-\begin{equation}
-\mathcal{L}(A,B) = w.(1-\cos(y_{A}, y_{B})) + (1-w).\cos^2(y_{A}, y_{B})
-\end{equation}
 
-with $w \in \{0,1\}$ (different or same word). Roughly speaking, the loss function is minimum when the vector representations for matching frames are colinear for matching frames and orthogonal for mismatching frames. Such loss function was shown to be optimal in \cite{synnaeve}. The network is initialized with random weights and then trained on x\% of the data. The rest of the data is used as a heldout set, which is tested to stop training in order to prevent the network from overfitting. The  'early stopping' rule is xxx. The networks were run for 500 epochs on a K20 Tesla GPU machine. The ABnet code is programmed in python with the Theano library and available in xxx.
+This part of the system learns a phonetic embedding, i.e., a vector representation of speech sounds. It is based on the work of \cite{synnaeve&dupoux2014}. Here we use a siamese network architecture \cite{siamese} (see Figure~\ref{fig:abnet}) where we stack 7 frames of input features in the input layer (a center frame, and 3 context frames on each side), followed by K layers of 500 units, and a final output layer of 100 units. Two identical copies of the same network are fed by the members of each pairs of features $A$, and $B$, respectively. %The output of these two networks ($y_A$ and $y_B$) are then compared using the $coscos^2$ loss function as follows:
+%\begin{equation}
+%\mathcal{L}(A,B) = w.(1-\cos(y_{A}, y_{B})) + (1-w).\cos^2(y_{A}, y_{B})
+%\end{equation}
+These are then forward propagated in the ABnet, where we finally use an asymmetric loss as found in \cite{drlim} for learning invariants in images, with a margin as in \cite{wsabie}. So that in the embedding (noted $Y$) we get:
+\begin{eqnarray*}
+    \mathcal{L}_{\textsc{coscos2}}(A,B) = \left\{
+        \begin{array}{l}
+              (1-\cos(Y_A, Y_B)) / 2 \ \ \ if\ \mathrm{same}\\
+                \cos^2(Y_A, Y_B)\ \ \ if\ \mathrm{different}
+            \end{array}\right.
+        \end{eqnarray*}
+        with $$\cos(x, y) = \frac{\langle x, y \rangle}{\|x\|\|y\|}$$
+
+
+Over a whole batch, as we perform negative samples at a positive:negative rate of 1:1, this boils down to a loss of:
+$$\mathcal{L}(A,B,C) = \frac{1 - \cos(Y_A, Y_B)}{2} + \cos^2(Y_A, Y_{C})$$
+%with $w \in \{0,1\}$ (different or same word).
+Roughly speaking, the loss function is minimum when the vector representations for matching frames are colinear for matching frames and orthogonal for mismatching frames. This $\textsc{coscos2}$ loss was shown to perform well in \cite{synnaeve}. The network is initialized with random weights and then trained on \textcolor{red}{TODO}\% of the data. The rest of the data is used as a heldout validation set, which is tested to stop training in order to prevent the network from overfitting. The  'early stopping' rule is \textcolor{red}{TODO}. The networks were trained for a maximum of 500 epochs by mini-batch stochastic gradient descent (using Adadelta \cite{adadelta}) on an Nvidia K20 Tesla GPU. The ABnet code uses the Theano library\cite{theano2010,theano2012}, and is freely available$^1$\footnote{1: \url{https://github.com/SnippyHolloW/abnet/}}.
 
 \subsection{Mdelta filter}
 The Mdelta measure that we used was based on hermaksnly. It uses a correlation method to derive two ditance
@@ -153,6 +178,8 @@ Topline            & 12.1      & 16.0      & 3.5       & 4.5      \\
 %\hline
 %\end{tabular}
 %\end{table*}
+\bibliography{mybib}
+\bibliographystyle{IEEEtran}
 
  \section{Acknowledgements}
 RT, ED, GS, MV and ED's research was funded by the European Research Council (ERC-2011-AdG 295810 BOOTPHON), the Agence Nationale pour la Recherche (ANR-2010-BLAN-1901-1 BOOTLANG) and the Fondation de France. It was also supported by ANR-10-IDEX-0001-02 PSL and ANR-10-LABX-0087 IEC.
